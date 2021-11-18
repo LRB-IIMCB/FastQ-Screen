@@ -71,6 +71,9 @@ my $pass;
 my $inverse;
 my $get_genomes;
 my $add_genome;
+my $out_prefix;
+my $report_title;
+my $aligner_command_print;
 
 my $config_result = GetOptions(
     "subset=i"    => \$subset_count,
@@ -98,6 +101,8 @@ my $config_result = GetOptions(
 	"inverse"     => \$inverse,
 	"get_genomes" => \$get_genomes,
     "add_genome=s" => \$add_genome,
+    "out_prefix=s" => \$out_prefix,
+    "report_title=s" => \$report_title,
 );
 
 die "Could not parse options, please adjust configuration.\n" unless ($config_result);
@@ -368,6 +373,9 @@ sub process_file {
     # if they're using standard Illumina naming. It doesn't
     # really matter if this fails
     my $outfile = basename($file);
+    if ($out_prefix ne "") {
+		$outfile = $out_prefix . '_' . $outfile;
+    }
     $outfile = $outdir . $outfile;
     $outfile =~ s/\.gz$//;
     $outfile =~ s/\.(txt|seq|fastq|fq)$//i;
@@ -852,6 +860,9 @@ sub make_html{
     my $file = $_[0];
 	
 	my $summary_file = basename($file);
+	if ($out_prefix ne "") {
+		$summary_file = $out_prefix . '_' . $summary_file;
+	}
     $summary_file = $outdir . $summary_file;
     $summary_file =~ s/\.gz$//;
     $summary_file =~ s/\.(txt|seq|fastq|fq)$//i;
@@ -991,7 +1002,10 @@ sub make_html{
     close TEMPLATE or die "Could not close filehandle on HTML summary template: $!";
 
     #Edit template
-	my $filename_to_display = basename($file);
+    my $filename_to_display = basename($file);
+	if ($report_title ne "") {
+		$filename_to_display = $report_title;
+	}
 	if(scalar @bisulfite_data){
 		my $bisulfite_graph_height = 100 * (scalar @bisulfite_data);
 		$bisulfite_graph_height = 500 if($bisulfite_graph_height < 500);
@@ -1038,7 +1052,7 @@ sub make_html{
     $html_string =~ s/INPUT_DATESTAMP/$datestamp/g;
     $html_string =~ s/INPUT_TABLE_DATA/$table_string/g;
     $html_string =~ s/INPUT_VERSION/$version/g;
-    $html_string =~ s/INPUT_MAPPING_PARAMETERS/$aligner/g;
+    $html_string =~ s/INPUT_MAPPING_PARAMETERS/$aligner_command_print/g;
     $html_string =~ s/INPUT_SUBSET/$subset/g;
 	
 	$html_string =~ s/INPUT_HOVERTEXT_PERC_ONE_HIT_ONE_GENOME/$hover_pc_one_hit_one_genome_string/g;
@@ -1270,6 +1284,8 @@ sub conventional_mapping {
     } else {    #BWA
     	$aligner_command = "$path_to_bwa mem -a $bwa_opts $illumina_flag -t $number_of_threads $library->[1] \'$file\' 2>$error_filename |";
     }
+
+	$aligner_command_print = $aligner_command;
 
     open( ALIGNER, $aligner_command ) or die "Failed to launch aligner command '$aligner_command': $!";
 
@@ -2705,5 +2721,7 @@ Options
                       highest priority. 
 
 --version             Print the program version and exit.
+--out_prefix          Prefix added to the output filenames
+--report_title        Title added to the HTML report
 
 2020 Babraham Institute, Cambridge, UK 
